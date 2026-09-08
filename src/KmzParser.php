@@ -184,6 +184,8 @@ final class KmzParser
                         break;
                 }
             }
+        }
+
         $reader->close();
         return ['points' => $points, 'skipped' => $skipped];
     }
