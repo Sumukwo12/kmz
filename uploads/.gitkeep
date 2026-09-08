@@ -1,0 +1,4 @@
+This directory is intentionally unused at runtime — uploaded files are
+processed from PHP's temp location and never written here. It exists only
+so the folder is present with .htaccess protection if you choose to persist
+uploads in a future version.
