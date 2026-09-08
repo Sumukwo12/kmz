@@ -53,12 +53,29 @@ kenya-kmz-app/
 └── README.md
 ```
 
-## Running it locally
+## Running with Docker (Recommended for Deployment)
+
+### Using Docker Compose:
+```bash
+docker compose up -d --build
+```
+Then visit **`http://localhost:8000`** in your browser.
+
+### Using Docker CLI directly:
+```bash
+# Build the image
+docker build -t kenya-kmz-app .
+
+# Run the container
+docker run -d -p 8000:80 --name kenya-kmz-app kenya-kmz-app
+```
+
+## Running it locally with PHP CLI
 
 From the project root:
 
 ```bash
-php -S localhost:8000 -t public
+php -d upload_max_filesize=25M -d post_max_size=26M -d memory_limit=256M -S localhost:8000 -t public
 ```
 
 Then open `http://localhost:8000` in a browser.
