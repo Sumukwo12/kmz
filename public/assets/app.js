@@ -6,7 +6,7 @@
   const map = L.map('map', {
     zoomControl: false,
     attributionControl: true,
-    minZoom: 6,
+    minZoom: 5.5,
     maxBoundsViscosity: 1.0
   });
 
@@ -53,7 +53,30 @@
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   map.setMaxBounds(KENYA_BOUNDS);
-  map.fitBounds(KENYA_BOUNDS);
+  fitMapToKenya();
+
+  function getMapPadding() {
+    const w = window.innerWidth;
+    if (w <= 480) return [20, 20];
+    if (w <= 768) return [40, 40];
+    return [70, 70];
+  }
+
+  function fitMapToKenya() {
+    map.fitBounds(KENYA_BOUNDS, { padding: getMapPadding() });
+  }
+
+  // Handle window resizing & orientation change
+  let resizeTimeout = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      map.invalidateSize();
+      if (points.length > 1) {
+        map.fitBounds(points.map(p => [p.lat, p.lng]), { padding: getMapPadding() });
+      }
+    }, 150);
+  });
 
   // ---------- State ----------
   let points = [];          // all loaded points, in file order
@@ -67,13 +90,27 @@
   let animHandle = null;
   let timeoutHandle = null;
 
+  // DOM Elements
   const speedSlider = document.getElementById('speedSlider');
   const statusLine = document.getElementById('statusLine');
   const heroSub = document.getElementById('heroSub');
   const playBtn = document.getElementById('playBtn');
+  const playBtnText = document.getElementById('playBtnText');
   const restartBtn = document.getElementById('restartBtn');
+  const locationsPanel = document.getElementById('locationsPanel');
   const locationsList = document.getElementById('locationsList');
   const locationsCount = document.getElementById('locationsCount');
+  const headerLocationsBadge = document.getElementById('headerLocationsBadge');
+  const locationsSearch = document.getElementById('locationsSearch');
+  const clearSearchBtn = document.getElementById('clearSearchBtn');
+  const toggleLocationsBtn = document.getElementById('toggleLocationsBtn');
+  const closeLocationsBtn = document.getElementById('closeLocationsBtn');
+  const legendPanel = document.getElementById('legendPanel');
+  const toggleLegendBtn = document.getElementById('toggleLegendBtn');
+  const closeLegendBtn = document.getElementById('closeLegendBtn');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  const controlsPanel = document.getElementById('controlsPanel');
+  const collapseControlsBtn = document.getElementById('collapseControlsBtn');
 
   function travelDuration() {
     const v = parseInt(speedSlider.value, 10); // 1 (slow) .. 10 (fast)
@@ -94,6 +131,84 @@
     timeoutHandle = null;
   }
 
+  // ---------- Drawer & Modal Management ----------
+  function openLocationsDrawer() {
+    locationsPanel.classList.add('drawer-open');
+    drawerBackdrop.classList.add('active');
+    toggleLocationsBtn.classList.add('active');
+  }
+
+  function closeLocationsDrawer() {
+    locationsPanel.classList.remove('drawer-open');
+    drawerBackdrop.classList.remove('active');
+    toggleLocationsBtn.classList.remove('active');
+  }
+
+  function toggleLocationsDrawer() {
+    if (locationsPanel.classList.contains('drawer-open')) {
+      closeLocationsDrawer();
+    } else {
+      closeLegendModal();
+      openLocationsDrawer();
+    }
+  }
+
+  function openLegendModal() {
+    legendPanel.classList.add('is-open');
+    toggleLegendBtn.classList.add('active');
+  }
+
+  function closeLegendModal() {
+    legendPanel.classList.remove('is-open');
+    toggleLegendBtn.classList.remove('active');
+  }
+
+  function toggleLegendModal() {
+    if (legendPanel.classList.contains('is-open')) {
+      closeLegendModal();
+    } else {
+      closeLocationsDrawer();
+      openLegendModal();
+    }
+  }
+
+  toggleLocationsBtn.addEventListener('click', toggleLocationsDrawer);
+  closeLocationsBtn.addEventListener('click', closeLocationsDrawer);
+  toggleLegendBtn.addEventListener('click', toggleLegendModal);
+  closeLegendBtn.addEventListener('click', closeLegendModal);
+  drawerBackdrop.addEventListener('click', () => {
+    closeLocationsDrawer();
+    closeLegendModal();
+  });
+
+  // Controls minimization / expand
+  if (collapseControlsBtn) {
+    collapseControlsBtn.addEventListener('click', () => {
+      controlsPanel.classList.toggle('is-collapsed');
+    });
+  }
+
+  // ---------- Locations Search / Filter ----------
+  if (locationsSearch) {
+    locationsSearch.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      clearSearchBtn.style.display = q ? 'block' : 'none';
+      const items = locationsList.querySelectorAll('.location-item');
+      items.forEach(item => {
+        const text = item.querySelector('.location-name').textContent.toLowerCase();
+        item.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      locationsSearch.value = '';
+      clearSearchBtn.style.display = 'none';
+      const items = locationsList.querySelectorAll('.location-item');
+      items.forEach(item => item.style.display = 'flex');
+      locationsSearch.focus();
+    });
+  }
+
   // ---------- Drawing ----------
   function clearLayers() {
     markers.forEach(m => {
@@ -102,16 +217,17 @@
     markers = [];
     if (beamLine) map.removeLayer(beamLine);
     if (light) map.removeLayer(light);
-    beamLine = null; light = null;
+    beamLine = null;
+    light = null;
     clearTimers();
   }
 
   function stopIcon(n, state) {
-    // state: 'idle' | 'active' | 'pinned' | 'just-pinned'
     return L.divIcon({
       className: '',
       html: '<div class="stop-dot ' + state + '">' + n + '</div>',
-      iconSize: [20, 20], iconAnchor: [10, 10]
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
     });
   }
 
@@ -119,12 +235,12 @@
     return L.divIcon({
       className: '',
       html: '<div class="hub-marker"><div class="hub-ring"></div><div class="hub-ring hub-ring-delay"></div><div class="hub-core">HQ</div></div>',
-      iconSize: [46, 46], iconAnchor: [23, 23]
+      iconSize: [46, 46],
+      iconAnchor: [23, 23]
     });
   }
 
   function findHubIndex(pts) {
-    // Prefer an explicit "Vilcom HQ" match first, then any generic HQ/headquarters label.
     let idx = pts.findIndex(p => /vilcom\s*hq/i.test(p.name));
     if (idx === -1) {
       idx = pts.findIndex(p => /\bhq\b/i.test(p.name) || /headquarters/i.test(p.name));
@@ -137,25 +253,24 @@
     points = pts;
     targetCursor = 0;
     playing = false;
-    playBtn.textContent = 'Play';
+    updatePlayButtonState(false);
 
     if (points.length === 0) {
       setStatus('No points found in <b>' + escapeHtml(sourceLabel) + '</b>.', true);
       playBtn.disabled = true;
       restartBtn.disabled = true;
       locationsList.innerHTML = '';
-      locationsCount.textContent = '0';
+      locationsCount.textContent = '0 / 0 pinned';
+      headerLocationsBadge.textContent = '0';
       return;
     }
 
     hubIndex = points.length > 1 ? findHubIndex(points) : -1;
-    if (hubIndex === -1) hubIndex = 0; // fall back to the first point as the hub
+    if (hubIndex === -1) hubIndex = 0;
     targetOrder = points.map((_, i) => i).filter(i => i !== hubIndex);
 
     const latlngs = points.map(p => [p.lat, p.lng]);
 
-    // Create markers: only add the Hub marker to the map initially.
-    // Target markers will be pinned 1 by 1 as the route progresses!
     markers = points.map((p, i) => {
       const isHub = i === hubIndex;
       const m = L.marker([p.lat, p.lng], {
@@ -173,13 +288,14 @@
     beamLine = L.polyline([], { color: '#f0c878', weight: 2.5, opacity: 0 }).addTo(map);
     light = L.marker(latlngs[hubIndex], {
       icon: L.divIcon({ className: '', html: '<div class="light-dot"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }),
-      zIndexOffset: 1000, opacity: 0
+      zIndexOffset: 1000,
+      opacity: 0
     }).addTo(map);
 
     buildLocationsList();
 
     if (points.length > 1) {
-      map.fitBounds(latlngs, { padding: [60, 60] });
+      map.fitBounds(latlngs, { padding: getMapPadding() });
     } else {
       map.setView(latlngs[0], 10);
     }
@@ -187,7 +303,7 @@
     let statusHtml = '<b>' + points.length + ' location' + (points.length === 1 ? '' : 's') + '</b> loaded';
     statusHtml += ' · hub: ' + escapeHtml(points[hubIndex].name);
     if (skippedCount) {
-      statusHtml += ' · ' + skippedCount + ' point' + (skippedCount === 1 ? '' : 's') + ' outside Kenya skipped';
+      statusHtml += ' · ' + skippedCount + ' outside Kenya skipped';
     }
     setStatus(statusHtml, false);
 
@@ -200,7 +316,6 @@
     }
   }
 
-  // stop-dot numbers count only the non-hub targets, in their travel order
   function targetLabelNumber(pointIdx) {
     const pos = targetOrder.indexOf(pointIdx);
     return pos === -1 ? '·' : pos + 1;
@@ -208,7 +323,10 @@
 
   function buildLocationsList() {
     locationsList.innerHTML = '';
-    locationsCount.textContent = '0 / ' + targetOrder.length + ' pinned';
+    const total = targetOrder.length;
+    locationsCount.textContent = '0 / ' + total + ' pinned';
+    headerLocationsBadge.textContent = String(total);
+
     points.forEach((p, i) => {
       const isHub = i === hubIndex;
       const item = document.createElement('button');
@@ -219,8 +337,14 @@
       item.innerHTML =
         '<span class="location-badge">' + badge + '</span>' +
         '<span class="location-name">' + escapeHtml(p.name) + '</span>';
+      
       if (!isHub) {
-        item.addEventListener('click', () => jumpToTarget(targetOrder.indexOf(i)));
+        item.addEventListener('click', () => {
+          jumpToTarget(targetOrder.indexOf(i));
+          if (window.innerWidth <= 768) {
+            closeLocationsDrawer();
+          }
+        });
       }
       locationsList.appendChild(item);
     });
@@ -251,14 +375,13 @@
     if (!targetOrder[cursor]) return;
     clearTimers();
     playing = false;
-    playBtn.textContent = 'Play';
+    updatePlayButtonState(false);
 
     targetCursor = cursor;
     const pointIdx = targetOrder[cursor];
     const to = points[pointIdx];
     const hub = points[hubIndex];
 
-    // Pin all markers up to and including cursor; remove markers after cursor
     targetOrder.forEach((p, i) => {
       if (i <= cursor) {
         if (!map.hasLayer(markers[p])) {
@@ -290,8 +413,6 @@
 
   function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
-  // Animates the light traveling from the hub out to one target.
-  // Once light reaches target, the pin drops onto the map!
   function animateBeam(cursor, onDone) {
     const pointIdx = targetOrder[cursor];
     const hub = points[hubIndex];
@@ -325,7 +446,6 @@
       if (t < 1) {
         animHandle = requestAnimationFrame(travelFrame);
       } else {
-        // Target reached: PIN the marker onto the map!
         if (!map.hasLayer(markers[pointIdx])) {
           markers[pointIdx].addTo(map);
         }
@@ -365,11 +485,9 @@
         targetCursor = nextCursor;
         timeoutHandle = setTimeout(loopStep, 90);
       } else {
-        // ALL locations are now pinned!
         setStatus('<b>All ' + targetOrder.length + ' locations pinned!</b> Restarting cycle in 2s…', false);
         timeoutHandle = setTimeout(() => {
           if (!playing) return;
-          // Clear all pinned target markers from map and restart pinning 1 by 1
           targetOrder.forEach(pIdx => {
             if (map.hasLayer(markers[pIdx])) {
               map.removeLayer(markers[pIdx]);
@@ -383,10 +501,22 @@
     });
   }
 
+  function updatePlayButtonState(isPlaying) {
+    if (playBtnText) {
+      playBtnText.textContent = isPlaying ? 'Pause' : 'Play';
+    }
+    const icon = playBtn.querySelector('.play-icon');
+    if (icon) {
+      icon.innerHTML = isPlaying
+        ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'
+        : '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+    }
+  }
+
   function togglePlay(force) {
     if (targetOrder.length === 0) return;
     playing = (typeof force === 'boolean') ? force : !playing;
-    playBtn.textContent = playing ? 'Pause' : 'Play';
+    updatePlayButtonState(playing);
     if (playing) loopStep();
     else clearTimers();
   }
@@ -395,7 +525,6 @@
   restartBtn.addEventListener('click', () => {
     clearTimers();
     targetCursor = 0;
-    // Remove all target markers from map
     targetOrder.forEach(pointIdx => {
       if (map.hasLayer(markers[pointIdx])) {
         map.removeLayer(markers[pointIdx]);
