@@ -1,9 +1,12 @@
 <?php
 declare(strict_types=1);
 
+ini_set('display_errors', '0');
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+
 require_once __DIR__ . '/../src/KmzParser.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 ini_set('memory_limit', '256M');
 set_time_limit(30);
 

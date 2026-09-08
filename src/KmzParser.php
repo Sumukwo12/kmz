@@ -75,20 +75,12 @@ final class KmzParser
      */
     private static function extractPoints(string $kml): array
     {
-        // Harden against XXE regardless of PHP/libxml version.
-        $previousEntityLoader = null;
-        if (function_exists('libxml_disable_entity_loader')) {
-            $previousEntityLoader = libxml_disable_entity_loader(true);
-        }
         libxml_use_internal_errors(true);
 
         $reader = new XMLReader();
         $ok = $reader->XML($kml, 'UTF-8', LIBXML_NONET);
 
         if (!$ok) {
-            if ($previousEntityLoader !== null) {
-                libxml_disable_entity_loader($previousEntityLoader);
-            }
             throw new RuntimeException('The KML content could not be parsed. The file may be corrupted.');
         }
 
@@ -192,13 +184,7 @@ final class KmzParser
                         break;
                 }
             }
-        }
-
         $reader->close();
-        if ($previousEntityLoader !== null) {
-            libxml_disable_entity_loader($previousEntityLoader);
-        }
-
         return ['points' => $points, 'skipped' => $skipped];
     }
 

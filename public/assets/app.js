@@ -414,7 +414,13 @@
     heroSub.textContent = 'Processing…';
     try {
       const res = await fetch(url, options);
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        throw new Error('Server returned invalid response (' + (res.status || '500') + ')');
+      }
       if (!res.ok || data.error) {
         throw new Error(data.error || ('Request failed (' + res.status + ')'));
       }

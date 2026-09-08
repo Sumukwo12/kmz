@@ -22,6 +22,7 @@ RUN echo "upload_max_filesize = 25M" >> /usr/local/etc/php/conf.d/custom.ini \
     && echo "post_max_size = 26M" >> /usr/local/etc/php/conf.d/custom.ini \
     && echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/custom.ini \
     && echo "max_execution_time = 30" >> /usr/local/etc/php/conf.d/custom.ini \
+    && echo "display_errors = Off" >> /usr/local/etc/php/conf.d/custom.ini \
     && echo "expose_php = Off" >> /usr/local/etc/php/conf.d/custom.ini
 
 # Set working directory
