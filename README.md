@@ -1,12 +1,16 @@
 # Kenya Site Route Viewer (PHP + Terrain / Leaflet Map)
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46e3b7?style=for-the-badge&logo=render&logoColor=white)](https://kmz-s8xc.onrender.com)
+
+**Live App**: [https://kmz-s8xc.onrender.com](https://kmz-s8xc.onrender.com)
+
 A modern PHP app that reads real `.kmz` / `.kml` files, plots the site
-points inside them on a rich **Terrain / Topographic** map locked to Kenya, and
+points inside them on a rich **Dark Terrain / Topographic** map locked to Kenya, and
 animates a marker jumping stop-to-stop along the route.
 
 It ships pre-loaded with your **VILCOM_POP_SITES_UPDATED.kmz** as the
 default sample (`data/VILCOM_POP_SITES_UPDATED.kmz`) — open the app and it
-loads automatically. You can switch between **Terrain**, **OpenTopo**, **Satellite**, and **Streets** views anytime, or upload any other `.kmz`/`.kml`.
+loads automatically. You can switch between **Dark Terrain**, **OpenTopo**, **Dark Map**, and **Satellite** views anytime, or upload any other `.kmz`/`.kml`.
 
 ## What it does with your file
 
