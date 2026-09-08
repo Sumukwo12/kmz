@@ -31,10 +31,11 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . /var/www/html/
 
-# Set proper permissions for Apache user
-RUN chown -R www-data:www-data /var/www/html
+# Make entrypoint script executable and set proper permissions
+RUN chmod +x /var/www/html/docker-entrypoint.sh \
+    && chown -R www-data:www-data /var/www/html
 
 # Expose standard HTTP port
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+ENTRYPOINT ["/var/www/html/docker-entrypoint.sh"]
